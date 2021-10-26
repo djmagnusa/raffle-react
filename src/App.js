@@ -1,25 +1,77 @@
-import logo from './logo.svg';
+import React from 'react';
 import './App.css';
+import web3 from './web3';
+import raffle from './raffle';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
+class App extends React.Component {
+  state = {
+    manager: '',
+    players: [],
+    balance: '',
+    value: '',
+    message: ''
+  };
+
+  async componentDidMount() {
+    const manager = await raffle.methods.manager().call();
+    const players = await raffle.methods.getPlayers().call();
+    const balance = await web3.eth.getBalance(raffle.options.address); //address of the lottery contract
+
+    this.setState({ manager, players, balance });
+  }
+
+  onSubmit = async (event) => {
+    event.preventDefault();
+
+    const accounts = await web3.eth.getAccounts();
+
+    this.setState({ message: 'Waiting on transaction success...' });
+
+    await raffle.methods.enter().send({
+      from: accounts[0],
+      value: web3.utils.toWei(this.state.value, 'ether')
+    });
+
+    this.setState({message: 'You have been entered! '});
+
+
+
+  }
+
+  
+  render() {
+    return (
+      <div>
+        <h2>Raffle Contract!</h2>
         <p>
-          Edit <code>src/App.js</code> and save to reload.
+          This contract is managed by {this.state.manager}.
+          There are currently {this.state.players.length} people entered, 
+          competing to win {web3.utils.fromWei(this.state.balance, 'ether')} ether!
         </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+        <hr />
+
+        <form onSubmit={this.onSubmit}>
+          
+          <h4>Want to try your luck?</h4>
+         
+          <div>
+            <label>Amount of ether to enter</label>
+            <input
+              value={this.state.value}
+              onChange={event => this.setState({ value: event.target.value })}
+            />
+          </div>
+          <button>Enter</button>
+        </form>
+
+        <hr />
+
+        <h1>{this.state.message}</h1>
+        
+      </div>
+    );
+  }
 }
 
 export default App;
